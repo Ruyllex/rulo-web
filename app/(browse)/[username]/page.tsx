@@ -219,27 +219,55 @@ export default async function UserPage({ params }: UserPageProps) {
             {/* Información del stream */}
             <Card className="border-cyan-500/20">
               <CardContent className="p-6">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12 border-2 border-cyan-500/30">
-                    <AvatarImage src={user.imageUrl} />
-                    <AvatarFallback className="bg-cyan-600 text-white">
-                      {user.username[0].toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-4 flex-1 min-w-[300px]">
+                    <Avatar className="h-12 w-12 border-2 border-cyan-500/30">
+                      <AvatarImage src={user.imageUrl} />
+                      <AvatarFallback className="bg-cyan-600 text-white">
+                        {user.username[0].toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
-                  <div className="flex-1">
-                    <h2 className="text-xl font-semibold mb-1">
-                      {user.stream?.name || `Stream de ${user.username}`}
-                    </h2>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span className="font-medium text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
-                        {user.username}
-                        {user.isVerified && <VerifiedBadge size="sm" />}
-                      </span>
-                      <Separator orientation="vertical" className="h-4" />
-                      <span>{followerCount.toLocaleString()} seguidores</span>
+                    <div className="flex-1">
+                      <h2 className="text-xl font-semibold mb-1">
+                        {user.stream?.name || `Stream de ${user.username}`}
+                      </h2>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span className="font-medium text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
+                          {user.username}
+                          {user.isVerified && <VerifiedBadge size="sm" />}
+                        </span>
+                        <Separator orientation="vertical" className="h-4" />
+                        <span>{followerCount.toLocaleString()} seguidores</span>
+                      </div>
                     </div>
                   </div>
+
+                  {/* Botones en línea horizontal - Solo para visitantes */}
+                  {!isSelf && (
+                    <div className="flex gap-2 items-center">
+                      <FollowButton
+                        userId={user.id}
+                        isFollowing={isFollowing}
+                        username={user.username}
+                      />
+                      <SubscribeButton
+                        streamerId={user.id}
+                        streamerName={user.username}
+                        isSubscribed={currentUser?.isPrime}
+                        isPrime={currentUser?.isPrime}
+                        size="md"
+                      />
+                      <Button
+                        size="default"
+                        variant="outline"
+                        className="border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-cyan-600 dark:text-cyan-400"
+                      >
+                        <Gift className="h-4 w-4 mr-2" />
+                        <span className="whitespace-nowrap">Regalar Sub</span>
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
