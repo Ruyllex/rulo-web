@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { createLiveKitToken } from "@/lib/livekit";
+import { createLiveKitToken } from "@/lib/livekit-service";
 
 export async function POST(req: Request) {
   const { roomName, role } = await req.json();
