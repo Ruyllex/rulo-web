@@ -23,6 +23,35 @@ const ingressClient = new IngressClient(wsUrl, apiKey, apiSecret);
 const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
 
 /**
+ * Crea un token de acceso genérico para LiveKit
+ * Usado tanto para hosts (publishers) como para viewers
+ */
+export const createLiveKitToken = ({
+  identity,
+  roomName,
+  isPublisher = false,
+}: {
+  identity: string;
+  roomName: string;
+  isPublisher?: boolean;
+}) => {
+  const at = new AccessToken(apiKey, apiSecret, {
+    identity,
+    ttl: "1h",
+  });
+
+  at.addGrant({
+    room: roomName,
+    roomJoin: true,
+    canPublish: isPublisher,
+    canPublishData: isPublisher,
+    canSubscribe: true,
+  });
+
+  return at.toJwt();
+};
+
+/**
  * Crea un token de acceso para un viewer
  */
 export const createViewerToken = async (
