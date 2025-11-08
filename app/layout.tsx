@@ -5,6 +5,8 @@ import { dark } from "@clerk/themes";
 import { Toaster } from "sonner";
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { WhatsAppSupport } from "@/components/whatsapp-support";
+import { AdminButton } from "@/components/admin-button";
 
 import "./globals.css";
 
@@ -12,10 +14,10 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | GameHub",
-    default: "GameHub",
+    template: "%s | Rulo",
+    default: "Rulo",
   },
-  description: "Twitch Clone with Next.js, React.js, TailWindCSS & TypeScript.",
+  description: "Rulo Stream Platform",
 };
 
 export default function RootLayout({
@@ -25,14 +27,16 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider appearance={{ baseTheme: dark }}>
-      <html lang="en">
+      <html lang="es">
         <body className={inter.className}>
           <ThemeProvider
             attribute="class"
             forcedTheme="dark"
             storageKey="gamehub-theme"
           >
-            <Toaster theme="light" position="bottom-center" />
+            {/* ✅ Cambiar theme a "dark" para que combine con tu app */}
+            <Toaster theme="dark" position="bottom-right" richColors />
+            <AdminButton />
             {children}
           </ThemeProvider>
         </body>

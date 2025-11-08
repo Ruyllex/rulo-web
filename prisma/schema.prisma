@@ -1,7 +1,6 @@
 datasource db {
-  provider     = "mysql"
-  url          = env("DATABASE_URL")
-  relationMode = "prisma"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -9,23 +8,427 @@ generator client {
   previewFeatures = ["fullTextSearch", "fullTextIndex"]
 }
 
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  USER
+  STREAMER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum AdType {
+  PRE_ROLL
+  MID_ROLL
+  BANNER
+  OVERLAY
+}
+
+enum AdStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum SponsorType {
+  PLATFORM
+  STREAMER
+}
+
+enum SponsorStatus {
+  PENDING
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum ModerationAction {
+  BAN
+  UNBAN
+  TIMEOUT
+  DELETE_MESSAGE
+  WARNING
+  ROLE_CHANGE
+  AD_APPROVE
+  AD_REJECT
+  SPONSOR_APPROVE
+  SPONSOR_REJECT
+  USER_VERIFIED
+  USER_UNVERIFIED
+}
+
+// ✅ ENUM ÚNICO - Fusionado
+enum TransactionType {
+  PURCHASE      // Compra de Solcitos
+  DONATION      // Donación en stream
+  CHEER         // Envío de Solcitos en stream
+  PRIME_SUB     // Suscripción Prime
+  SUBSCRIPTION  // Suscripción a canal
+  WITHDRAWAL    // Retiro de fondos
+  REFUND        // Reembolso
+  GIFT          // Regalo
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MERCADOPAGO
+  STRIPE
+  PAYPAL
+  MANUAL
+}
+
+// ============================================
+// MODELOS
+// ============================================
+
+model Transaction {
+  id                String              @id @default(uuid())
+  userId            String
+  user              User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type              TransactionType
+  status            TransactionStatus   @default(PENDING)
+  
+  amount            Decimal             @db.Decimal(10, 2)
+  solcitosAmount    Int                 @default(0)
+  bonusAmount       Int                 @default(0)
+  
+  provider          PaymentProvider
+  providerId        String?
+  paymentMethod     String?
+  
+  description       String?             @db.Text
+  metadata          Json?
+  
+  processedAt       DateTime?
+  failureReason     String?             @db.Text
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([providerId])
+}
+
 model User {
-  id             String  @id @default(uuid())
-  username       String  @unique
-  imageUrl       String  @db.Text
-  externalUserId String  @unique
-  bio            String? @db.Text
+  id              String @id @default(uuid())
+  username        String @unique
+  imageUrl        String @db.Text
+  externalUserId  String @unique
+  bio             String? @db.Text
+  role            UserRole @default(USER)
+  
+  // Campos de Streamer
+  isStreamer      Boolean @default(false)
+  streamKey       String? @unique
+  serverUrl       String? @db.Text
 
-  following  Follow[] @relation("Following")
-  followedBy Follow[] @relation("FollowedBy")
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  
+  showSponsors    Boolean @default(true)
+  
+  // Campos de monetización
+  solcitosBalance       Int @default(0)
+  totalSolcitosEarned   Int @default(0)
+  availableBalance      Float @default(0)
+  isPrime               Boolean @default(false)
+  primeExpiresAt        DateTime?
+  transactions          Transaction[]
+  
+  // Campos de moderación
+  isBanned        Boolean @default(false)
+  banReason       String? @db.Text
+  bannedAt        DateTime?
+  bannedBy        String?
+  
+  // Ganancias
+  adRevenue       Decimal @default(0) @db.Decimal(10, 2)
+  sponsorRevenue  Decimal @default(0) @db.Decimal(10, 2)
+  
+  // Relaciones
+  following       Follow[] @relation("Following")
+  followedBy      Follow[] @relation("FollowedBy")
+  blocking        Block[] @relation("Blocking")
+  blockedBy       Block[] @relation("BlockedBy")
+  
+  stream          Stream?
+  
+  sponsors              Sponsor[] @relation("StreamerSponsors")
+  adsCreated            Ad[] @relation("AdCreator")
+  adImpressions         AdImpression[]
+  moderationLogs        ModerationLog[] @relation("ModeratorLogs")
+  moderationActions     ModerationLog[] @relation("UserModerated")
+  
+  solcitoPurchases      SolcitoPurchase[]
+  solcitosSent          SolcitoTransaction[] @relation("SolcitosSent")
+  solcitosReceived      SolcitoTransaction[] @relation("SolcitosReceived")
+  primeMemberships      PrimeMembership[]
+  donationsSent         DirectDonation[] @relation("DonationsSent")
+  donationsReceived     DirectDonation[] @relation("DonationsReceived")
+  userSubscriptions     ChannelSubscription[] @relation("UserSubscriptions")
+  streamerSubscriptions ChannelSubscription[] @relation("StreamerSubscriptions")
+  giftedSubscriptions   ChannelSubscription[] @relation("GiftedSubscriptions")
+  
+  badges                UserBadge[]
+  channelBadges         UserBadge[] @relation("ChannelBadges")
+  channelEmojis         Emoji[] @relation("ChannelEmojis")
+  
+  payouts               Payout[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
 
-  blocking  Block[] @relation("Blocking")
-  blockedBy Block[] @relation("BlockedBy")
+model ChatMessage {
+  id          String   @id @default(uuid())
+  message     String   @db.Text
+  
+  userId      String
+  username    String
+  userImage   String
+  
+  streamId    String
+  stream      Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  isPrime     Boolean  @default(false)
+  isStreamer  Boolean  @default(false)
+  isModerator Boolean  @default(false)
+  
+  solcitos    Int?
+  
+  isDeleted   Boolean  @default(false)
+  deletedBy   String?
+  deletedAt   DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([streamId])
+  @@index([userId])
+  @@index([createdAt])
+}
 
-  stream Stream?
+model ChatSettings {
+  id                    String   @id @default(uuid())
+  streamId              String   @unique
+  stream                Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  isChatEnabled         Boolean  @default(true)
+  isChatDelayed         Boolean  @default(false)
+  chatDelaySeconds      Int      @default(0)
+  isChatFollowersOnly   Boolean  @default(false)
+  isChatSubscribersOnly Boolean  @default(false)
+  slowModeSeconds       Int      @default(0)
+  
+  blockedWords          String[] @default([])
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Ad {
+  id              String @id @default(uuid())
+  title           String
+  description     String? @db.Text
+  
+  type            AdType
+  status          AdStatus @default(DRAFT)
+  
+  imageUrl        String? @db.Text
+  videoUrl        String? @db.Text
+  clickUrl        String? @db.Text
+  
+  duration        Int @default(30)
+  skipAfter       Int @default(5)
+  
+  targetPrime     Boolean @default(false)
+  minViewers      Int @default(0)
+  maxViewers      Int @default(999999)
+  
+  cpm             Decimal @db.Decimal(10, 2)
+  cpc             Decimal @db.Decimal(10, 2)
+  budget          Decimal @db.Decimal(10, 2)
+  spent           Decimal @default(0) @db.Decimal(10, 2)
+  
+  impressions     Int @default(0)
+  clicks          Int @default(0)
+  completions     Int @default(0)
+  skips           Int @default(0)
+  
+  startDate       DateTime
+  endDate         DateTime
+  
+  createdById     String
+  createdBy       User @relation("AdCreator", fields: [createdById], references: [id])
+  
+  impressionLogs  AdImpression[]
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([type])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model AdImpression {
+  id              String @id @default(uuid())
+  adId            String
+  userId          String?
+  streamId        String?
+  
+  shown           Boolean @default(false)
+  completed       Boolean @default(false)
+  clicked         Boolean @default(false)
+  skipped         Boolean @default(false)
+  
+  watchTime       Int @default(0)
+  
+  ipAddress       String?
+  userAgent       String? @db.Text
+  country         String?
+  
+  ad              Ad @relation(fields: [adId], references: [id], onDelete: Cascade)
+  user            User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([adId])
+  @@index([userId])
+  @@index([streamId])
+  @@index([createdAt])
+}
+
+model Sponsor {
+  id              String @id @default(uuid())
+  name            String
+  description     String? @db.Text
+  
+  type            SponsorType
+  status          SponsorStatus @default(PENDING)
+  
+  streamerId      String?
+  streamer        User? @relation("StreamerSponsors", fields: [streamerId], references: [id], onDelete: Cascade)
+  
+  logoUrl         String @db.Text
+  bannerUrl       String? @db.Text
+  websiteUrl      String? @db.Text
+  
+  affiliateCode   String? @unique
+  affiliateUrl    String? @db.Text
+  
+  monthlyAmount   Decimal @db.Decimal(10, 2)
+  revenueShare    Decimal @default(0) @db.Decimal(3, 2)
+  
+  displayOrder    Int @default(0)
+  showOnStream    Boolean @default(true)
+  showOnProfile   Boolean @default(true)
+  
+  clicks          Int @default(0)
+  conversions     Int @default(0)
+  
+  startDate       DateTime
+  endDate         DateTime
+  autoRenew       Boolean @default(false)
+  
+  contactEmail    String?
+  notes           String? @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([status])
+  @@index([streamerId])
+  @@index([startDate])
+  @@index([endDate])
+}
+
+model ModerationLog {
+  id              String @id @default(uuid())
+  
+  moderatorId     String
+  moderator       User @relation("ModeratorLogs", fields: [moderatorId], references: [id])
+  
+  userId          String
+  user            User @relation("UserModerated", fields: [userId], references: [id])
+  
+  action          ModerationAction
+  reason          String @db.Text
+  details         String? @db.Text
+  
+  duration        Int?
+  expiresAt       DateTime?
+  
+  ipAddress       String?
+  relatedId       String?
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([moderatorId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model PlatformStats {
+  id              String @id @default(uuid())
+  date            DateTime @unique
+  
+  totalUsers      Int @default(0)
+  newUsers        Int @default(0)
+  activeUsers     Int @default(0)
+  primeUsers      Int @default(0)
+  
+  totalStreamers  Int @default(0)
+  liveStreamers   Int @default(0)
+  newStreamers    Int @default(0)
+  
+  totalViews      Int @default(0)
+  totalWatchTime  Int @default(0)
+  peakConcurrent  Int @default(0)
+  
+  revenue         Decimal @default(0) @db.Decimal(10, 2)
+  adRevenue       Decimal @default(0) @db.Decimal(10, 2)
+  sponsorRevenue  Decimal @default(0) @db.Decimal(10, 2)
+  solcitosRevenue Decimal @default(0) @db.Decimal(10, 2)
+  primeRevenue    Decimal @default(0) @db.Decimal(10, 2)
+  subsRevenue     Decimal @default(0) @db.Decimal(10, 2)
+  
+  totalTransactions Int @default(0)
+  solcitosSent    Int @default(0)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([date])
+}
+
+model SystemSetting {
+  id              String @id @default(uuid())
+  key             String @unique
+  value           String @db.Text
+  description     String? @db.Text
+  type            String @default("string")
+  
+  updatedAt       DateTime @updatedAt
+  
+  @@index([key])
 }
 
 model Stream {
@@ -41,16 +444,38 @@ model Stream {
   isChatEnabled       Boolean @default(true)
   isChatDelayed       Boolean @default(false)
   isChatFollowersOnly Boolean @default(false)
+  
+  subsOnly        Boolean  @default(false)
+  primeOnly       Boolean  @default(false)
+  minSolcitos     Int      @default(0)
+  
+  currentDonations Decimal @default(0) @db.Decimal(10, 2)
+  currentSolcitos  Int     @default(0)
+  newSubs          Int     @default(0)
+  totalStreamHours        Decimal @default(0) @db.Decimal(10, 2)
+  totalStreamHoursLast30  Decimal @default(0) @db.Decimal(10, 2)
+  averageViewers          Int     @default(0)
+  averageViewersLast30    Int     @default(0)
+  peakViewers             Int     @default(0)
+  uniqueChattersLast30    Int     @default(0)
+  
+  lastStreamStartedAt     DateTime?
+  lastStreamEndedAt       DateTime?
 
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  alerts StreamAlert[]
+  sessions StreamSession[]
+
+  chatSettings          ChatSettings?
+  messages              ChatMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([ingressId])
-  @@fulltext([name])
 }
 
 model Follow {
@@ -80,4 +505,301 @@ model Block {
   @@unique([blockerId, blockedId])
   @@index([blockerId])
   @@index([blockedId])
+}
+
+model SolcitoPackage {
+  id          String   @id @default(uuid())
+  name        String
+  amount      Int
+  price       Decimal  @db.Decimal(10, 2)
+  bonus       Int      @default(0)
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  
+  purchases   SolcitoPurchase[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([active])
+}
+
+model SolcitoPurchase {
+  id              String   @id @default(uuid())
+  userId          String
+  packageId       String
+  
+  amount          Int
+  price           Decimal  @db.Decimal(10, 2)
+  currency        String   @default("USD")
+  
+  paymentMethod   String
+  paymentId       String?  @unique
+  status          String   @default("pending")
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  package         SolcitoPackage @relation(fields: [packageId], references: [id])
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model SolcitoTransaction {
+  id              String          @id @default(uuid())
+  fromUserId      String
+  toStreamerId    String
+  
+  amount          Int
+  message         String?         @db.Text
+  
+  type            TransactionType @default(CHEER)
+  highlighted     Boolean         @default(false)
+  
+  paymentProvider String?
+  paymentId       String?
+  orderId         String?
+  
+  fromUser        User            @relation("SolcitosSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toStreamer      User            @relation("SolcitosReceived", fields: [toStreamerId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime        @default(now())
+  
+  @@index([fromUserId])
+  @@index([toStreamerId])
+  @@index([createdAt])
+  @@index([paymentId])
+}
+
+model PrimeMembership {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  
+  status          String   @default("active")
+  price           Decimal  @default(3.99) @db.Decimal(10, 2)
+  
+  stripeSubscriptionId String? @unique
+  mercadoPagoId   String?  @unique
+  
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  canceledAt      DateTime?
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([endDate])
+}
+
+model DirectDonation {
+  id              String   @id @default(uuid())
+  fromUserId      String?
+  toStreamerId    String
+  
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("USD")
+  message         String?  @db.Text
+  
+  paymentMethod   String
+  paymentId       String?  @unique
+  
+  platformFee     Decimal  @default(0.08) @db.Decimal(3, 2)
+  streamerAmount  Decimal  @db.Decimal(10, 2)
+  
+  status          String   @default("pending")
+  isAnonymous     Boolean  @default(false)
+  
+  showOnStream    Boolean  @default(true)
+  alertShown      Boolean  @default(false)
+  
+  fromUser        User?    @relation("DonationsSent", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toStreamer      User     @relation("DonationsReceived", fields: [toStreamerId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([fromUserId])
+  @@index([toStreamerId])
+  @@index([status])
+  @@index([alertShown])
+}
+
+model ChannelSubscription {
+  id              String   @id @default(uuid())
+  userId          String
+  streamerId      String
+  
+  tier            String   @default("tier1")
+  price           Decimal  @db.Decimal(10, 2)
+  
+  paymentMethod   String
+  paymentId       String?  @unique
+  
+  isGift          Boolean  @default(false)
+  giftedBy        String?
+  
+  status          String   @default("active")
+  
+  startDate       DateTime @default(now())
+  endDate         DateTime
+  canceledAt      DateTime?
+  
+  user            User     @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  streamer        User     @relation("StreamerSubscriptions", fields: [streamerId], references: [id], onDelete: Cascade)
+  gifter          User?    @relation("GiftedSubscriptions", fields: [giftedBy], references: [id], onDelete: SetNull)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([userId, streamerId])
+  @@index([userId])
+  @@index([streamerId])
+  @@index([status])
+}
+
+model Emoji {
+  id              String   @id @default(uuid())
+  code            String   @unique
+  imageUrl        String
+  
+  type            String   @default("global")
+  channelId       String?
+  
+  requiresPrime   Boolean  @default(false)
+  requiresSub     Boolean  @default(false)
+  
+  active          Boolean  @default(true)
+  
+  channel         User?    @relation("ChannelEmojis", fields: [channelId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([type])
+  @@index([channelId])
+}
+
+model Badge {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  imageUrl        String
+  
+  type            String
+  tier            Int?
+  
+  userBadges      UserBadge[]
+  
+  createdAt       DateTime @default(now())
+}
+
+model UserBadge {
+  id              String   @id @default(uuid())
+  userId          String
+  badgeId         String
+  channelId       String?
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge           Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  channel         User?    @relation("ChannelBadges", fields: [channelId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([userId, badgeId, channelId])
+  @@index([userId])
+  @@index([channelId])
+}
+
+model StreamAlert {
+  id              String   @id @default(uuid())
+  streamId        String
+  
+  type            String
+  
+  fromUser        String?
+  amount          Decimal? @db.Decimal(10, 2)
+  message         String?  @db.Text
+  
+  displayDuration Int      @default(5)
+  soundUrl        String?
+  animationUrl    String?
+  
+  shown           Boolean  @default(false)
+  shownAt         DateTime?
+  
+  stream          Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([streamId])
+  @@index([shown])
+  @@index([createdAt])
+}
+
+model Payout {
+  id              String   @id @default(uuid())
+  userId          String
+  
+  amount          Decimal  @db.Decimal(10, 2)
+  currency        String   @default("USD")
+  
+  method          String
+  accountInfo     Json?
+  
+  status          String   @default("pending")
+  
+  processedAt     DateTime?
+  failureReason   String?
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model StreamSession {
+  id              String   @id @default(uuid())
+  streamId        String
+  
+  startedAt       DateTime
+  endedAt         DateTime?
+  
+  durationMinutes Int      @default(0)
+  peakViewers     Int      @default(0)
+  averageViewers  Int      @default(0)
+  
+  newFollowers    Int      @default(0)
+  newSubscribers  Int      @default(0)
+  totalDonations  Decimal  @default(0) @db.Decimal(10, 2)
+  totalSolcitos   Int      @default(0)
+  
+  stream          Stream   @relation(fields: [streamId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([streamId])
+  @@index([startedAt])
+}
+
+model ChatActivity {
+  id              String   @id @default(uuid())
+  streamId        String
+  userId          String
+  username        String
+  
+  messageCount    Int      @default(1)
+  lastMessageAt   DateTime @default(now())
+  
+  createdAt       DateTime @default(now())
+  
+  @@unique([streamId, userId])
+  @@index([streamId])
+  @@index([lastMessageAt])
 }

@@ -19,8 +19,10 @@ export function Recommended({
   return (
     <div>
       {showLabel && (
-        <div className="pl-6 mb-4">
-          <p className="text-xs text-muted-foreground">Recommended</p>
+        <div className="pl-6 mb-4 border-b border-cyan-500/10 pb-2">
+          <p className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">
+            Recomendado
+          </p>
         </div>
       )}
       <ul className="space-y-2 px-2">
@@ -39,7 +41,7 @@ export function Recommended({
 
 export function RecommendedSkeleton() {
   return (
-    <ul className="px-2">
+    <ul className="px-2 space-y-2">
       {[...Array(3)].map((_, i) => (
         <UserItemSkeleton key={i} />
       ))}

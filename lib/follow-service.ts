@@ -125,3 +125,17 @@ export const unfollowUser = async (id: string) => {
 
   return follow;
 };
+
+export const getFollowerCount = async (userId: string) => {
+  try {
+    const count = await db.follow.count({
+      where: {
+        followingId: userId,
+      },
+    });
+
+    return count;
+  } catch {
+    return 0;
+  }
+};

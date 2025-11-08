@@ -1,9 +1,8 @@
+// app/(dashboard)/u/[username]/layout.tsx
 import React from "react";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
-
-import { getSelfByUsername } from "@/lib/auth-service";
-
+import { getSelf } from "@/lib/auth-service";
 import { Navbar } from "./_components/navbar";
 import { Sidebar } from "./_components/sidebar";
 import { Container } from "./_components/container";
@@ -19,9 +18,17 @@ export default async function CreatorLayout({
   children: React.ReactNode;
   params: { username: string };
 }) {
-  const self = await getSelfByUsername(username);
+  // Cambiar de getSelfByUsername a getSelf
+  const self = await getSelf().catch(() => null);
 
-  if (!self) redirect("/");
+  if (!self) {
+    redirect("/");
+  }
+
+  // Verificar que el username coincide
+  if (self.username !== username) {
+    redirect("/");
+  }
 
   return (
     <>

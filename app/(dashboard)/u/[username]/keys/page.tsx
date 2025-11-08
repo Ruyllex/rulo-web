@@ -1,30 +1,44 @@
-import React from "react";
-
+// app/(dashboard)/u/[username]/keys/page.tsx
 import { getSelf } from "@/lib/auth-service";
-import { getStreamByUserId } from "@/lib/stream-service";
+import { redirect } from "next/navigation";
+import { KeysClient } from "./keys-client";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
-import { URLCard } from "./_components/url-card";
-import { KeyCard } from "./_components/key-card";
-import { ConnectModal } from "./_components/connect-modal";
-
-export default async function KeysPage() {
+export default async function StreamKeysPage({
+  params,
+}: {
+  params: { username: string };
+}) {
   const self = await getSelf();
-  const stream = await getStreamByUserId(self.id);
 
-  if (!stream) {
-    throw new Error("No stream found");
+  if (!self || self.username !== params.username) {
+    redirect("/");
   }
 
+  if (!self.isStreamer) {
+    return (
+      <div className="p-6">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            Necesitas ser streamer para acceder a esta página. 
+            Ve a tu studio y activa el modo streamer.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // Verificar si ya tiene credenciales
+  const hasCredentials = self.serverUrl && self.streamKey;
+
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold">Keys & URLs</h1>
-        <ConnectModal />
-      </div>
-      <div className="space-y-4">
-        <URLCard value={stream.serverUrl} />
-        <KeyCard value={stream.streamKey} />
-      </div>
-    </div>
+    <KeysClient
+      username={self.username}
+      initialServerUrl={self.serverUrl || ""}
+      initialStreamKey={self.streamKey || ""}
+      hasCredentials={hasCredentials}
+    />
   );
 }
