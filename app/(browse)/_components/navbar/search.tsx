@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import qs from "query-string";
 import { SearchIcon, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -14,7 +13,6 @@ export function Search() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
     if (!value) return;
 
     const url = qs.stringifyUrl(
@@ -33,7 +31,7 @@ export function Search() {
   return (
     <form
       onSubmit={onSubmit}
-      className="relative w-full lg:w-[400px] flex items-center"
+      className="relative w-full flex items-center"
     >
       <Input
         value={value}

@@ -84,12 +84,16 @@ export default async function UserPage({ params }: UserPageProps) {
     ? [...streamerSponsors, ...platformSponsors]
     : platformSponsors;
 
-  // Valores seguros para las estadísticas
+  // Valores seguros para las estadísticas - Convertir Decimal a número
   const averageViewers = user.stream?.averageViewers ?? 0;
   const peakViewers = user.stream?.peakViewers ?? 0;
   const totalStreamHours = user.stream?.totalStreamHours ?? 0;
   const createdAt = user.createdAt ?? new Date();
   const streamId = user.stream?.id;
+  
+  // Convertir campos Decimal a número para evitar warnings
+  const adRevenue = user.adRevenue ? Number(user.adRevenue) : 0;
+  const sponsorRevenue = user.sponsorRevenue ? Number(user.sponsorRevenue) : 0;
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,33 +163,35 @@ export default async function UserPage({ params }: UserPageProps) {
               </div>
             </div>
 
-          {/* Botones de Follow, Suscribirse y Regalar Sub */}
-          {!isSelf && (
-            <div className="flex flex-col gap-2 w-full md:w-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full md:min-w-[450px]">
-                <FollowButton
-                  userId={user.id}
-                  isFollowing={isFollowing}
-                  username={user.username}
-                />
-                <SubscribeButton
-                  streamerId={user.id}
-                  streamerName={user.username}
-                  isSubscribed={currentUser?.isPrime}
-                  isPrime={currentUser?.isPrime}
-                  size="md"
-                />
-                <Button
-                  size="default"
-                  variant="outline"
-                  className="border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-cyan-600 dark:text-cyan-400 w-full"
-                >
-                  <Gift className="h-4 w-4 mr-2" />
-                  <span className="whitespace-nowrap">Regalar una Sub</span>
-                </Button>
+            {/* Botones de Follow, Suscribirse y Regalar Sub */}
+            {!isSelf && (
+              <div className="w-full md:w-auto md:min-w-[350px]">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
+                  <FollowButton
+                    userId={user.id}
+                    isFollowing={isFollowing}
+                    username={user.username}
+                    className="w-full"
+                  />
+                  <SubscribeButton
+                    streamerId={user.id}
+                    streamerName={user.username}
+                    isSubscribed={currentUser?.isPrime}
+                    isPrime={currentUser?.isPrime}
+                    size="md"
+                    className="w-full"
+                  />
+                  <Button
+                    size="default"
+                    variant="outline"
+                    className="w-full border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-cyan-600 dark:text-cyan-400"
+                  >
+                    <Gift className="h-4 w-4 mr-2" />
+                    <span className="whitespace-nowrap">Regalar Sub</span>
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </div>
         </div>
       </div>
@@ -219,20 +225,21 @@ export default async function UserPage({ params }: UserPageProps) {
             {/* Información del stream */}
             <Card className="border-cyan-500/20">
               <CardContent className="p-6">
-                <div className="flex items-start justify-between gap-4 flex-wrap">
-                  <div className="flex items-start gap-4 flex-1 min-w-[300px]">
-                    <Avatar className="h-12 w-12 border-2 border-cyan-500/30">
+                <div className="flex flex-col gap-4">
+                  {/* Información del streamer */}
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-12 w-12 border-2 border-cyan-500/30 flex-shrink-0">
                       <AvatarImage src={user.imageUrl} />
                       <AvatarFallback className="bg-cyan-600 text-white">
                         {user.username[0].toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
 
-                    <div className="flex-1">
-                      <h2 className="text-xl font-semibold mb-1">
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-xl font-semibold mb-1 truncate">
                         {user.stream?.name || `Stream de ${user.username}`}
                       </h2>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
                         <span className="font-medium text-cyan-600 dark:text-cyan-400 flex items-center gap-1">
                           {user.username}
                           {user.isVerified && <VerifiedBadge size="sm" />}
@@ -243,13 +250,14 @@ export default async function UserPage({ params }: UserPageProps) {
                     </div>
                   </div>
 
-                  {/* Botones en línea horizontal - Solo para visitantes */}
+                  {/* Botones - Solo para visitantes */}
                   {!isSelf && (
-                    <div className="flex gap-2 items-center">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 w-full">
                       <FollowButton
                         userId={user.id}
                         isFollowing={isFollowing}
                         username={user.username}
+                        className="w-full"
                       />
                       <SubscribeButton
                         streamerId={user.id}
@@ -257,11 +265,12 @@ export default async function UserPage({ params }: UserPageProps) {
                         isSubscribed={currentUser?.isPrime}
                         isPrime={currentUser?.isPrime}
                         size="md"
+                        className="w-full"
                       />
                       <Button
                         size="default"
                         variant="outline"
-                        className="border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-cyan-600 dark:text-cyan-400"
+                        className="w-full border-cyan-500/30 hover:bg-cyan-500/10 hover:border-cyan-500/50 text-cyan-600 dark:text-cyan-400"
                       >
                         <Gift className="h-4 w-4 mr-2" />
                         <span className="whitespace-nowrap">Regalar Sub</span>
@@ -272,46 +281,46 @@ export default async function UserPage({ params }: UserPageProps) {
               </CardContent>
             </Card>
 
-          {/* SECCIÓN: Acerca de / Biografía - SIEMPRE VISIBLE */}
-          <Card className="border-cyan-500/20">
-            <CardContent className="p-6">
-              <h3 className="font-semibold mb-3 text-cyan-600 dark:text-cyan-400 flex items-center gap-2">
-                <Sparkles className="h-5 w-5" />
-                Acerca de
-              </h3>
-              {user.bio ? (
-                <>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {user.bio}
-                  </p>
-                  <Link href={`/${username}/about`}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-4 text-cyan-600 hover:text-cyan-500 hover:bg-cyan-500/10"
-                    >
-                      Ver más información →
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground italic leading-relaxed">
-                    {user.username} aún no ha agregado una biografía.
-                  </p>
-                  <Link href={`/${username}/about`}>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="mt-4 text-cyan-600 hover:text-cyan-500 hover:bg-cyan-500/10"
-                    >
-                      Ver perfil completo →
-                    </Button>
-                  </Link>
-                </>
-              )}
-            </CardContent>
-          </Card>
+            {/* SECCIÓN: Acerca de / Biografía - SIEMPRE VISIBLE */}
+            <Card className="border-cyan-500/20">
+              <CardContent className="p-6">
+                <h3 className="font-semibold mb-3 text-cyan-600 dark:text-cyan-400 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5" />
+                  Acerca de
+                </h3>
+                {user.bio ? (
+                  <>
+                    <p className="text-muted-foreground leading-relaxed">
+                      {user.bio}
+                    </p>
+                    <Link href={`/${username}/about`}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-4 text-cyan-600 hover:text-cyan-500 hover:bg-cyan-500/10"
+                      >
+                        Ver más información →
+                      </Button>
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted-foreground italic leading-relaxed">
+                      {user.username} aún no ha agregado una biografía.
+                    </p>
+                    <Link href={`/${username}/about`}>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="mt-4 text-cyan-600 hover:text-cyan-500 hover:bg-cyan-500/10"
+                      >
+                        Ver perfil completo →
+                      </Button>
+                    </Link>
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar - Chat y Stats */}

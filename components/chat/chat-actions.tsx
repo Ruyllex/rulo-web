@@ -235,24 +235,42 @@ export function BuySolcitosButton({ variant = "icon" }: { variant?: "icon" | "fu
   );
 }
 
-// Botón de Suscribirse (Prime)
+// Botón de Suscribirse (Prime) - VERSIÓN MEJORADA CON TAMAÑO CONSISTENTE
 export function SubscribeButton({
   streamerId,
   streamerName,
   isSubscribed = false,
   isPrime = false,
+  size = "default",
+  className = "",
 }: {
   streamerId: string;
   streamerName: string;
   isSubscribed?: boolean;
   isPrime?: boolean;
+  size?: "sm" | "default" | "md" | "lg";
+  className?: string;
 }) {
   const [showModal, setShowModal] = useState(false);
-  const router = useRouter(); // ✅ AGREGAR useRouter
+  const router = useRouter();
 
   const handleSubscribe = () => {
-    // ✅ REDIRIGIR A /prime
     router.push("/prime");
+  };
+
+  // Tamaños consistentes con los otros botones
+  const sizeClasses = {
+    sm: "h-9 px-3 text-sm",
+    default: "h-10 px-4 text-sm",
+    md: "h-10 px-4 text-sm",
+    lg: "h-11 px-6 text-base",
+  };
+
+  const iconSizes = {
+    sm: "h-3.5 w-3.5",
+    default: "h-4 w-4",
+    md: "h-4 w-4",
+    lg: "h-5 w-5",
   };
 
   // Si ya está suscrito
@@ -260,15 +278,17 @@ export function SubscribeButton({
     return (
       <button
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg",
+          "inline-flex items-center justify-center gap-2 rounded-lg font-medium",
           "bg-gradient-to-r from-purple-500/10 to-pink-500/10",
           "border border-purple-500/30",
-          "text-purple-400 cursor-default"
+          "text-purple-400 cursor-default",
+          sizeClasses[size],
+          className
         )}
         type="button"
       >
-        <Crown className="h-3.5 w-3.5" />
-        Suscrito
+        <Crown className={iconSizes[size]} />
+        <span>Suscrito</span>
       </button>
     );
   }
@@ -278,16 +298,18 @@ export function SubscribeButton({
       <button
         onClick={() => setShowModal(true)}
         className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg",
+          "inline-flex items-center justify-center gap-2 rounded-lg font-medium",
           "bg-gradient-to-r from-cyan-500/10 to-cyan-600/10",
           "border border-cyan-500/30 hover:border-cyan-500/50",
           "hover:from-cyan-500/20 hover:to-cyan-600/20",
-          "text-cyan-400 transition-all"
+          "text-cyan-400 transition-all",
+          sizeClasses[size],
+          className
         )}
         type="button"
       >
-        <Heart className="h-3.5 w-3.5" />
-        Suscribirse
+        <Heart className={iconSizes[size]} />
+        <span>Suscribirse</span>
       </button>
 
       {/* Modal de Suscripción */}
